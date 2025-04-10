@@ -38,18 +38,9 @@ export default function Home() {
 			'/audio/cabin-ambience-3.mp3',
 		];
 
-		audioRefs.current = sounds.map((sound, index) => {
+		audioRefs.current = sounds.map((sound) => {
 			const audio = new Audio(sound);
 			audio.volume = 0.3; // Set volume to 30%
-
-			// Only add loop event listener for ambient sounds (indices 1-3)
-			if (index > 0) {
-				audio.addEventListener('ended', () => {
-					audio.currentTime = 0;
-					audio.play();
-				});
-			}
-
 			return audio;
 		});
 
@@ -107,12 +98,9 @@ export default function Home() {
 		// Cleanup
 		return () => {
 			window.removeEventListener('resize', updateDimensions);
-			audioRefs.current.forEach((audio, index) => {
+			audioRefs.current.forEach((audio) => {
 				audio.pause();
-				if (index > 0) {
-					// Only remove event listener for ambient sounds
-					audio.removeEventListener('ended', () => {});
-				}
+				audio.currentTime = 0;
 			});
 			audioRefs.current = [];
 			if (flickerTimeoutRef.current) {
@@ -127,9 +115,9 @@ export default function Home() {
 
 		// Set the appropriate subtitle based on the tab
 		const subtitles = {
-			0: 'YOUNG, NAIVE',
-			1: 'UNCERTAIN, ANTICIPATION',
-			2: 'SECOND HOME, FAMILIAR',
+			0: 'young, naive',
+			1: 'uncertain, full of anticipation',
+			2: 'second home, familiar',
 		};
 		setTransitionSubtitle(subtitles[index as keyof typeof subtitles]);
 
@@ -141,6 +129,7 @@ export default function Home() {
 
 		// Play the transition sound (seatbelt ding)
 		if (audioRefs.current[0]) {
+			audioRefs.current[0].currentTime = 0;
 			audioRefs.current[0].play();
 		}
 
@@ -148,6 +137,7 @@ export default function Home() {
 			setActiveTab(index);
 			// Play the ambient sound for the new tab
 			if (audioRefs.current[index + 1]) {
+				audioRefs.current[index + 1].currentTime = 0;
 				audioRefs.current[index + 1].play();
 			}
 			setTimeout(() => {
