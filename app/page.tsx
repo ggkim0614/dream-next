@@ -38,9 +38,18 @@ export default function Home() {
 			'/audio/cabin-ambience-3.mp3',
 		];
 
-		audioRefs.current = sounds.map((sound) => {
+		audioRefs.current = sounds.map((sound, index) => {
 			const audio = new Audio(sound);
 			audio.volume = 0.3; // Set volume to 30%
+
+			// Only add loop event listener for ambient sounds (indices 1-3)
+			if (index > 0) {
+				audio.addEventListener('ended', () => {
+					audio.currentTime = 0;
+					audio.play();
+				});
+			}
+
 			return audio;
 		});
 
@@ -98,9 +107,12 @@ export default function Home() {
 		// Cleanup
 		return () => {
 			window.removeEventListener('resize', updateDimensions);
-			audioRefs.current.forEach((audio) => {
+			audioRefs.current.forEach((audio, index) => {
 				audio.pause();
-				audio.currentTime = 0;
+				if (index > 0) {
+					// Only remove event listener for ambient sounds
+					audio.removeEventListener('ended', () => {});
+				}
 			});
 			audioRefs.current = [];
 			if (flickerTimeoutRef.current) {
@@ -129,7 +141,6 @@ export default function Home() {
 
 		// Play the transition sound (seatbelt ding)
 		if (audioRefs.current[0]) {
-			audioRefs.current[0].currentTime = 0;
 			audioRefs.current[0].play();
 		}
 
@@ -137,7 +148,6 @@ export default function Home() {
 			setActiveTab(index);
 			// Play the ambient sound for the new tab
 			if (audioRefs.current[index + 1]) {
-				audioRefs.current[index + 1].currentTime = 0;
 				audioRefs.current[index + 1].play();
 			}
 			setTimeout(() => {
