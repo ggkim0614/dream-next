@@ -1,103 +1,255 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
+import StormClouds from './components/StormClouds';
+import StormCloudsVariation1 from './components/StormCloudsVariation1';
+import StormCloudsVariation2 from './components/StormCloudsVariation2';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+	const [activeTab, setActiveTab] = useState(0);
+	const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+	const [isTransitioning, setIsTransitioning] = useState(false);
+	const [isFlickering, setIsFlickering] = useState(false);
+	const [isHovered, setIsHovered] = useState(false);
+	const [transitionText, setTransitionText] = useState('');
+	const [transitionSubtitle, setTransitionSubtitle] = useState('');
+	const audioRefs = useRef<HTMLAudioElement[]>([]);
+	const flickerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+	useEffect(() => {
+		const updateDimensions = () => {
+			setDimensions({
+				width: window.innerWidth,
+				height: window.innerHeight,
+			});
+		};
+
+		// Set initial dimensions
+		updateDimensions();
+
+		// Add event listener for window resize
+		window.addEventListener('resize', updateDimensions);
+
+		// Initialize audio for each tab
+		const sounds = [
+			'/audio/seatbelt-ding.mp3',
+			'/audio/cabin-ambience-1.mp3',
+			'/audio/cabin-ambience-2.mp3',
+			'/audio/cabin-ambience-3.mp3',
+		];
+
+		audioRefs.current = sounds.map((sound, index) => {
+			const audio = new Audio(sound);
+			audio.volume = 0.3; // Set volume to 30%
+
+			// Only add loop event listener for ambient sounds (indices 1-3)
+			if (index > 0) {
+				audio.addEventListener('ended', () => {
+					audio.currentTime = 0;
+					audio.play();
+				});
+			}
+
+			return audio;
+		});
+
+		// Play the initial ambient sound
+		if (audioRefs.current[1]) {
+			audioRefs.current[1].play();
+		}
+
+		// Enhanced flickering effect
+		const startFlickering = () => {
+			const flickerType = Math.random();
+
+			if (flickerType < 0.3) {
+				// Quick consecutive flickers (2-4 times)
+				const flickerCount = Math.floor(Math.random() * 3) + 2;
+				let currentFlicker = 0;
+
+				const quickFlicker = () => {
+					setIsFlickering(true);
+					setTimeout(() => {
+						setIsFlickering(false);
+						currentFlicker++;
+
+						if (currentFlicker < flickerCount) {
+							setTimeout(quickFlicker, Math.random() * 200 + 100); // 100-300ms between quick flickers
+						} else {
+							// Schedule next flicker pattern
+							setTimeout(startFlickering, Math.random() * 2000 + 1000);
+						}
+					}, Math.random() * 150 + 100); // 100-250ms flicker duration
+				};
+
+				quickFlicker();
+			} else if (flickerType < 0.5) {
+				// Longer single flicker
+				setIsFlickering(true);
+				setTimeout(() => {
+					setIsFlickering(false);
+					// Schedule next flicker pattern
+					setTimeout(startFlickering, Math.random() * 2000 + 1000);
+				}, Math.random() * 300 + 200); // 200-500ms flicker duration
+			} else {
+				// Normal single flicker
+				setIsFlickering(true);
+				setTimeout(() => {
+					setIsFlickering(false);
+					// Schedule next flicker pattern
+					setTimeout(startFlickering, Math.random() * 2000 + 1000);
+				}, Math.random() * 150 + 100); // 100-250ms flicker duration
+			}
+		};
+
+		startFlickering();
+
+		// Cleanup
+		return () => {
+			window.removeEventListener('resize', updateDimensions);
+			audioRefs.current.forEach((audio, index) => {
+				audio.pause();
+				if (index > 0) {
+					// Only remove event listener for ambient sounds
+					audio.removeEventListener('ended', () => {});
+				}
+			});
+			audioRefs.current = [];
+			if (flickerTimeoutRef.current) {
+				clearTimeout(flickerTimeoutRef.current);
+			}
+		};
+	}, []);
+
+	const handleTabChange = (index: number) => {
+		setIsTransitioning(true);
+		setTransitionText(`TO ${tabs[index].name}`);
+
+		// Set the appropriate subtitle based on the tab
+		const subtitles = {
+			0: 'YOUNG, NAIVE',
+			1: 'UNCERTAIN, ANTICIPATION',
+			2: 'SECOND HOME, FAMILIAR',
+		};
+		setTransitionSubtitle(subtitles[index as keyof typeof subtitles]);
+
+		// Stop all currently playing sounds
+		audioRefs.current.forEach((audio) => {
+			audio.pause();
+			audio.currentTime = 0;
+		});
+
+		// Play the transition sound (seatbelt ding)
+		if (audioRefs.current[0]) {
+			audioRefs.current[0].play();
+		}
+
+		setTimeout(() => {
+			setActiveTab(index);
+			// Play the ambient sound for the new tab
+			if (audioRefs.current[index + 1]) {
+				audioRefs.current[index + 1].play();
+			}
+			setTimeout(() => {
+				setIsTransitioning(false);
+				setTransitionText('');
+				setTransitionSubtitle('');
+			}, 300);
+		}, 300);
+	};
+
+	const tabs = [
+		{ name: 'JFK', component: StormClouds },
+		{ name: 'SFO', component: StormCloudsVariation1 },
+		{ name: 'LAX', component: StormCloudsVariation2 },
+	];
+
+	const ActiveComponent = tabs[activeTab].component;
+
+	return (
+		<main className="min-h-screen bg-black">
+			<nav className="fixed top-0 left-0 right-0 z-50 pointer-events-none">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<div className="flex items-center justify-between h-16">
+						<div
+							className="text-white [font-family:var(--font-jetbrains-mono)] [text-transform:uppercase] text-sm relative pointer-events-auto"
+							onMouseEnter={() => setIsHovered(true)}
+							onMouseLeave={() => setIsHovered(false)}
+						>
+							DREAMS
+							<span
+								className={`absolute left-0 top-full mt-1 text-white [font-family:var(--font-jetbrains-mono)] [text-transform:lowercase] transition-opacity duration-300 ${
+									isHovered ? 'opacity-60' : 'opacity-0'
+								}`}
+							>
+								IN THE CLOUDS
+							</span>
+						</div>
+						<div className="flex items-center">
+							<div className="flex space-x-4">
+								{tabs.map((tab, index) => (
+									<button
+										key={index}
+										onClick={() => handleTabChange(index)}
+										className={`px-3 py-2 rounded-md text-sm [font-family:var(--font-jetbrains-mono)] pointer-events-auto transition-all duration-300 ${
+											activeTab === index
+												? 'text-white [text-transform:uppercase]'
+												: 'text-gray-400 hover:text-white [text-transform:lowercase]'
+										}`}
+									>
+										{tab.name}
+									</button>
+								))}
+							</div>
+						</div>
+					</div>
+				</div>
+			</nav>
+
+			<div className="h-screen relative">
+				{dimensions.width > 0 && dimensions.height > 0 && (
+					<div
+						className={`transition-all duration-300 ${
+							isTransitioning || isFlickering
+								? 'opacity-0 blur-sm'
+								: 'opacity-100 blur-none'
+						}`}
+					>
+						<ActiveComponent
+							width={dimensions.width}
+							height={dimensions.height}
+							flowSpeed={0.2}
+						/>
+					</div>
+				)}
+
+				{/* Transition Text */}
+				<div
+					className={`fixed inset-0 flex flex-col items-center justify-center pointer-events-none transition-opacity duration-300 ${
+						isTransitioning ? 'opacity-100' : 'opacity-0'
+					}`}
+				>
+					<div className="text-white [font-family:var(--font-jetbrains-mono)] [text-transform:uppercase] text-md tracking-wider">
+						{transitionText}
+					</div>
+					<div className="text-white [font-family:var(--font-jetbrains-mono)] [text-transform:lowercase] text-md tracking-wider opacity-50 mt-2">
+						{transitionSubtitle}
+					</div>
+				</div>
+			</div>
+
+			<footer className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none opacity-60">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<div className="flex items-center justify-between h-16">
+						<div className="text-white [font-family:var(--font-jetbrains-mono)] [text-transform:uppercase] text-sm">
+							Neuroscience of Imaginations, 25 SP
+						</div>
+						<div className="text-white [font-family:var(--font-jetbrains-mono)] [text-transform:uppercase] text-sm">
+							©George Kim, 2025
+						</div>
+					</div>
+				</div>
+			</footer>
+		</main>
+	);
 }
